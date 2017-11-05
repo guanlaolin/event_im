@@ -95,13 +95,12 @@ int main(int argc, char *argv[])
 		goto out;
 	}
 
-	return 0;
-
 	out:
 		close(sock);
 		event_base_free(base);
 		evconnlistener_free(listener);
 		closelog();
+		return 0;
 }
 
 void listener_cb(struct evconnlistener *_listener

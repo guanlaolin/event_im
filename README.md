@@ -1,2 +1,2 @@
-# event_im
-尝试写一个简单的im，学习C语言和Libevent
+# 基于Libevent的im服务器
+正在学习Libevent，写个简单的im练手，也当熟悉Libevent。
