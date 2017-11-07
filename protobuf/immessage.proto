@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package improto;
+
+message IMProto
+{
+	uint32		version = 1;
+	MSG_TYPE	type	= 2;
+	string		token	= 3;
+	uint64 		from	= 4;
+	uint64 		to		= 5;
+
+	message login_msg
+	{
+		string password = 1;
+	}
+}
+
+enum MSG_TYPE {
+	LOGIN	=	0;
+}
