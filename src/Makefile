@@ -1,6 +1,6 @@
 CC=g++
 FLAGS=-g -Wall
-LIBS=-levent -lhiredis -lprotobuf
+LIBS=-levent -lhiredis -lprotobuf -lpthread
 SRCS=main.cpp imredis.cpp immessage.pb.cpp
 OBJS = $(SRCS:.cpp=.o)
 TARGET=im

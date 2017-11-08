@@ -20,7 +20,7 @@ void dumpReply(redisReply *reply, std::string prefix)
 	}
 	std::cout<<"elements:"<<reply->elements<<'\n';
 	if (reply->elements){
-		for (int i = 0; i < reply->elements; i++){
+		for (unsigned int i = 0; i < reply->elements; i++){
 			dumpReply(reply->element[i], prefix+" child");
 		}	
 	}
@@ -69,6 +69,21 @@ bool Redis::SetNX(const std::string key, const std::string value)
 	}
 
 	return reply->integer;
+}
+
+std::string
+Redis::Get(const std::string key)
+{
+	redisReply *reply = (redisReply *)redisCommand(this->rc
+		, "GET %s", key.c_str());
+	if (REDIS_REPLY_STRING != reply->type) {
+		syslog(LOG_ERR, "Reply nil or error: %s, %d, %s\n"
+			, __func__, __LINE__
+			, reply->str);
+		return "";
+	}
+
+	return reply->str;
 }
 
 bool Redis::LPUSH(const std :: string key, const std :: string value)

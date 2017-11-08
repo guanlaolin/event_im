@@ -13,6 +13,7 @@ extern "C" {
 	#include <syslog.h>
 	#include <string.h>
 	#include <unistd.h>
+	#include <pthread.h>
 }
 #include "imredis.h"
 #include "immessage.pb.h"
@@ -22,6 +23,7 @@ extern "C" {
 #define IP "0.0.0.0"
 #define LOG_BUF_MAX_SIZE 1024
 #define DATA_BUF_MAX_SIZE 1024
+#define TOKEN_LEN 64
 
 //redis key
 const std::string REDIS_KEY_ORIGINAL_MSG	= "original-msg";
@@ -39,25 +41,16 @@ void listener_cb(struct evconnlistener *
 
 void read_cb(struct bufferevent *bev, void *ctx);
 void write_cb(struct bufferevent *bev, void *ctx);
-void event_cb(struct bufferevent *bev, short what, void *ctx);
+void event_cb(struct bufferevent *bev, short what
+	, void *ctx);
 
-#if 0
-/* 有问题，要是别的类型呢？ */
-char* logf(char *msg)
-{
-	char buf[LOG_BUF_MAX_SIZE];
-	sprintf(buf, "FUCTION[%s], LINE[%d]:%s.\n"
-		, __func__
-		, __LINE__
-		, msg);
-	
-	return buf;
-}
-#endif
+void login_cb(redisReply *reply);
+void* login_cb_proc(void *data);
 
 int main(int argc, char *argv[])
 {
-	int sock = 0;
+	int sock	= 0;
+	int pid		= 0;
 	struct sockaddr_in 		addr;
 	struct event_base 		*base = NULL;
 	struct evconnlistener 	*listener = NULL;
@@ -65,6 +58,26 @@ int main(int argc, char *argv[])
 	/* config */
 	openlog(argv[0], LOG_CONS|LOG_PERROR|LOG_PID, LOG_USER);
 	event_enable_debug_mode();
+
+	pid = fork();
+	if (pid < 0) {
+		syslog(LOG_ERR, "%s, %d, errno[%d], fork error.\n"
+			,__func__, __LINE__, errno);
+		return -1;
+	} 
+	else if (0 == pid) {
+		//child
+		Redis redis;
+
+		syslog(LOG_DEBUG, "creat child process success.\n");
+	
+		if (!redis.Subscribe(REDIS_CHANNEL_LOGIN_RECV, login_cb)){
+			syslog(LOG_ERR, "%s, %d, errno[%d], subscribe error.\n"
+			,__func__, __LINE__, errno);
+			return -1;
+		}
+		return 0;
+	}
 
 	/* socket */
 	sock = socket(AF_INET, SOCK_STREAM, 0);
@@ -222,3 +235,69 @@ void event_cb(struct bufferevent *bev, short what, void *ctx)
 	bufferevent_free(bev);
 }
 
+void login_cb(redisReply *reply)
+{
+	int ret = 0;
+	pthread_t *pid = NULL;
+	ret = pthread_create(pid, NULL, login_cb_proc, (void *)reply);
+	if (ret != 0){
+		syslog(LOG_WARNING, "FUNCTION:[%s], LINE:[%d], return[%d], create thread error.\n"
+			, __func__, __LINE__, ret);
+		goto out;
+	}
+		
+	out:
+		return;
+}
+
+void* login_cb_proc(void *_data)
+{
+	int fd = 0;
+	std::string token;
+	std::string data;
+	Redis redis;
+	redisReply *reply;
+	improto::IMProto imp;
+
+	reply = (redisReply *)_data;
+
+	if (reply->type != REDIS_REPLY_ARRAY
+		|| reply->elements <= 0)
+	{
+		syslog(LOG_WARNING, "%s, %d, type[%d], size of array[%lu], \
+			subscript message error\n"
+			, __func__, __LINE__, reply->type, reply->elements);
+		goto out;
+	}
+
+	fd = atoi(reply->element[2]->str);
+	if (0 == fd) {
+		syslog(LOG_INFO, "%s, %d, get fd error, raw value[%s]\n"
+		, __func__, __LINE__, reply->element[2]->str);
+		return (void*)-1;
+	}
+
+	token = redis.Get(reply->element[2]->str);
+
+	if ("" == token){
+		syslog(LOG_INFO, "%s, %d, get null or error\n"
+			, __func__, __LINE__);
+		imp.set_token("");
+	}
+
+	imp.set_token(token);
+	if (!imp.SerializeToString(&data)){
+		syslog(LOG_WARNING, "%s, %d, serialize object error, just trust to luck\n"
+			, __func__, __LINE__);
+		goto out;
+	}
+
+	if (send(fd, (void *)data.data(), data.length(), 0) == -1) {
+		syslog(LOG_WARNING, "%s, %d, send to client error, errno[%d], just trust to luck\n"
+			, __func__, __LINE__, errno);
+		goto out;
+	}
+
+	out:
+		return NULL;
+}

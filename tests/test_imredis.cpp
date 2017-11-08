@@ -57,9 +57,13 @@ int main(int argc, char *argv[])
 	/*
 	std::cout<<redis.LPUSH("testlist", "helloworld")<<std::endl;
 	std::cout<<redis.RPOP("testlist")<<std::endl;
-	*/
-#endif	
+	*/	
 	std::cout<<redis.Subscribe("testchannel", dumpReply)<<std::endl;
+#endif
+	std::cout<<redis.Get("testkey-value")<<std::endl;
+	std::cout<<redis.SetNX("testkey-value", "helloworld")<<std::endl;
+	std::cout<<redis.Get("testkey-value")<<std::endl;
+
 	
 	return 0;
 }

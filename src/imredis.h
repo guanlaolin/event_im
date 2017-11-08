@@ -19,14 +19,16 @@ class Redis
 
 		//key-value
 		bool SetNX(const std::string key, const std::string value);
+		std::string Get(const std::string key);
 
 		//list
 		bool LPUSH(const std::string key, const std::string value);
 		std::string RPOP(const std::string key);
 
 		//publish-subscribe
+		// if error, return -1
 		int Publish(const std::string channel, const std::string value);
-		//problem code
+		//inelegant code
 		bool Subscribe(const std::string channel, SUB_CB scb);
 		
 	protected:
