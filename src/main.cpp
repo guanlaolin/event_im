@@ -178,8 +178,8 @@ out:
 
 void read_cb(struct bufferevent *bev, void *ctx)
 {
-	int fd;							//客户端socket
-	char data[DATA_BUF_MAX_SIZE];	//消息缓冲区
+	int fd = 0;							//客户端socket
+	char data[DATA_BUF_MAX_SIZE] = {0};	//消息缓冲区
 	improto::IMProto imp;			//
 	Redis redis;
 
@@ -187,7 +187,7 @@ void read_cb(struct bufferevent *bev, void *ctx)
 	bufferevent_read(bev, data, sizeof(data));
 
 	if (!imp.ParseFromString(data)) {
-		syslog(LOG_INFO, "%s, %d, Parse to improto error.\n"
+		syslog(LOG_INFO, "%s, %d, parse to improto error.\n"
 			, __func__, __LINE__);
 		goto out;
 	}
@@ -197,13 +197,18 @@ void read_cb(struct bufferevent *bev, void *ctx)
 	{
 		case improto::LOGIN:
 			fd = bufferevent_getfd(bev);
-			if (!redis.SetNX(""+fd, data)) {
+			// size of array only test
+			char arr_fd[10];
+			sprintf(arr_fd, "%d", fd);
+			
+			if (!redis.SetNX(arr_fd, data)) {
 				syslog(LOG_WARNING, "%s, %d, key[%s], fd[%d], SETNX error, maybe already exist.\n"
-					, __func__, __LINE__, ""+fd, fd);
+					, __func__, __LINE__, arr_fd, fd);
 				goto out;
 			}
+			
 			//通过发布-订阅通知登录处理端
-			if (redis.Publish(REDIS_CHANNEL_LOGIN_SEND, ""+fd) < 0){
+			if (redis.Publish(REDIS_CHANNEL_LOGIN_SEND, arr_fd) < 0){
 				syslog(LOG_WARNING, "%s, %d, channel[%s], fd[%d], PUBLISH error.\n"
 					, __func__, __LINE__, REDIS_CHANNEL_LOGIN_SEND.c_str(), fd);
 				goto out;
