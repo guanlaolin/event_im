@@ -49,7 +49,6 @@ Redis::Redis(const std::string ip, const int port)
 			//throw 
 	    }
 	}
-	
 }
 
 Redis::~Redis()
@@ -115,19 +114,18 @@ int Redis::Publish(const std::string channel, const std::string value)
 	return reply->integer;
 }
 
-/* problem code */
-/*
-std::string*
-Redis::Subscribe(const std::string channel){
-	redisReply *reply = (redisReply *)redisCommand(this->rc
+/* inelegant code */
+bool Redis::Subscribe(const std::string channel, SUB_CB scb){
+	redisReply *reply = (redisReply *)redisCommand(rc
 		, "SUBSCRIBE %s", channel.c_str());
-	if (REDIS_REPLY_ARRAY != reply->type) {
-		syslog(LOG_ERR, "Reply error: func[%s], line[%d], replytype[%d], %s\n"
-			, __func__, __LINE__, reply->type
-			, reply->str);
-		return NULL;
+
+	freeReplyObject(reply);
+
+	while (redisGetReply(rc, (void **)&reply) == REDIS_OK) {
+		scb(reply);
+		freeReplyObject(reply);
 	}
-	return "hello";
+	
+	return false;
 }
-*/
 

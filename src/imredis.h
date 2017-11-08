@@ -8,6 +8,8 @@ extern "C" {
 const std::string REDIS_SERVER = "127.0.0.1";
 const int REDIS_PORT = 6379;
 
+typedef void (*SUB_CB)(redisReply *);
+
 class Redis
 {
 	public:
@@ -25,7 +27,7 @@ class Redis
 		//publish-subscribe
 		int Publish(const std::string channel, const std::string value);
 		//problem code
-		std::string Subscribe(const std::string channel);
+		bool Subscribe(const std::string channel, SUB_CB scb);
 		
 	protected:
 		
