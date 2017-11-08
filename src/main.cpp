@@ -24,8 +24,9 @@ extern "C" {
 #define DATA_BUF_MAX_SIZE 1024
 
 //redis key
-const std::string REDIS_KEY_ORIGINAL_MSG = "original-msg";
-const std::string REDIS_CHANNEL_LOGIN_SEND = 'login-send'
+const std::string REDIS_KEY_ORIGINAL_MSG	= "original-msg";
+const std::string REDIS_CHANNEL_LOGIN_SEND	= "login-send";
+const std::string REDIS_CHANNEL_LOGIN_RECV	= "login-recv";
 
 enum msg_type{
 	LOGIN = 1,
@@ -191,7 +192,7 @@ void read_cb(struct bufferevent *bev, void *ctx)
 			//通过发布-订阅通知登录处理端
 			if (redis.Publish(REDIS_CHANNEL_LOGIN_SEND, ""+fd) < 0){
 				syslog(LOG_WARNING, "%s, %d, channel[%s], fd[%d], PUBLISH error.\n"
-					, __func__, __LINE__, REDIS_CHANNEL_LOGIN_SEND, fd);
+					, __func__, __LINE__, REDIS_CHANNEL_LOGIN_SEND.c_str(), fd);
 				goto out;
 			}
 			break;
